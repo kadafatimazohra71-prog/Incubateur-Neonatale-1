@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام التحكم Arduino 🌡️ Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --dark: #1f2937;
+            --light: #f9fafb;
+        }
+
+        [data-theme="dark"] {
+            --bg: #111827;
+            --card-bg: #1f2937;
+            --text: #f9fafb;
+            --border: #374151;
+        }
+
+        [data-theme="light"] {
+            --bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-bg: #ffffff;
+            --text: #1f2937;
+            --border: #e5e7eb;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            transition: all 0.3s;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* الهيدر */
+        .header {
+            background: var(--card-bg);
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-left h1 {
+            font-size: 1.8em;
+            color: var(--primary);
+        }
+
+        .header-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .status-badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .badge-online { background: var(--success); color: white; }
+        .badge-offline { background: var(--danger); color: white; }
+        .badge-auto { background: var(--primary); color: white; }
+
+        .theme-toggle, .refresh-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover, .refresh-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        /* التبويبات */
+        .tabs {
+            background: var(--card-bg);
+            padding: 10px;
+            border-radius: 15px;
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .tab {
+            padding: 12px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: var(--text);
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* المحتوى */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* الشبكة */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        /* البطاقة */
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+
+        .card-title {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* عرض الحساسات */
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .sensor-item {
+            background: var(--light);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        [data-theme="dark"] .sensor-item {
+            background: #374151;
+        }
+
+        .sensor-item:hover {
+            transform: scale(1.05);
+        }
+
+        .sensor-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .sensor-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 10px 0;
+        }
+
+        .sensor-label {
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+
+        /* LED التحكم */
+        .led-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 30px;
+        }
+
+        .led-visual {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: #555;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            transition: all 0.5s;
+            position: relative;
+        }
+
+        .led-visual.on {
+            background: radial-gradient(circle, #4CAF50 0%, #45a049 100%);
+            box-shadow: 0 0 50px #4CAF50, 0 0 100px #4CAF50, 0 0 150px #4CAF50;
+        }
+
+        .led-visual::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-on {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-off {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        /* الرسوم البيانية */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        /* الإعدادات */
+        .settings-group {
+            margin-bottom: 25px;
+        }
+
+        .settings-group h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1em;
+            background: var(--card-bg);
+            color: var(--text);
+        }
+
+        .save-btn {
+            background: var(--success);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        /* الإحصائيات */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+
+        /* تفاصيل المستشعرات */
+        .sensor-detail {
+            background: var(--light);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
+        [data-theme="dark"] .sensor-detail {
+            background: #374151;
+        }
+
+        .sensor-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .sensor-detail-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .sensor-detail-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: var(--success);
+        }
+
+        .sensor-detail-info {
+            font-size: 0.9em;
+            color: var(--text);
+            opacity: 0.7;
+            margin-top: 10px;
+        }
+
+        /* الوضع المحمول */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .header-left h1 {
+                font-size: 1.4em;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+
+            .tab {
+                flex: 1 1 45%;
+                font-size: 0.9em;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sensor-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .control-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* أنيميشن التحميل */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* تنسيق الجداول */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .info-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .info-table td:first-child {
+            font-weight: bold;
+            color: var(--primary);
+            width: 40%;
+        }
+        /* تنسيقات أعضاء الفريق */
+        .team-member {
+            background: var(--light);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        [data-theme="dark"] .team-member {
+            background: #374151;
+        }
+
+        .team-member:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .member-avatar {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+
+        .team-member h4 {
+            color: var(--primary);
+            font-size: 1.3em;
+            margin-bottom: 5px;
+        }
+
+        .member-role {
+            color: var(--warning);
+            font-weight: 600;
+            margin-bottom: 15px;
+            font-size: 0.95em;
+        }
+
+        .member-info {
+            text-align: right;
+            margin: 20px 0;
+            font-size: 0.9em;
+            line-height: 1.8;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .social-btn {
+            padding: 8px 20px;
+            background: var(--primary);
+            color: white;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.85em;
+            transition: all 0.3s;
+        }
+
+        .social-btn:hover {
+            background: var(--secondary);
+            transform: scale(1.05);
+        }
+
+        /* تنسيقات المشرفين */
+        .supervisor-card {
+            background: var(--light);
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid var(--primary);
+        }
+
+        [data-theme="dark"] .supervisor-card {
+            background: #374151;
+        }
+
+        .supervisor-avatar {
+            font-size: 3.5em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .supervisor-card h4 {
+            color: var(--primary);
+            font-size: 1.4em;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .supervisor-title {
+            text-align: center;
+            color: var(--secondary);
+            font-weight: 600;
+            margin-bottom: 20px;
+            font-size: 1em;
+        }
+
+        .supervisor-info {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            line-height: 2;
+            font-size: 0.9em;
+        }
+
+        [data-theme="dark"] .supervisor-info {
+            background: #1f2937;
+        }
+
+        .expertise {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        [data-theme="dark"] .expertise {
+            background: #1f2937;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 5px 12px;
+            background: var(--primary);
+            color: white;
+            border-radius: 15px;
+            font-size: 0.85em;
+        }
+
+        .info-box {
+            background: var(--light);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+        }
+
+        [data-theme="dark"] .info-box {
+            background: #374151;
+        }
+
+        .info-box strong {
+            color: var(--primary);
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .info-box p {
+            margin: 0;
+        }
+
+        /* التنبيهات */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            color: #1e40af;
+            border-right: 4px solid #3b82f6;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border-right: 4px solid #f59e0b;
+        }
+
+        [data-theme="dark"] .alert-info {
+            background: #1e3a8a;
+            color: #dbeafe;
+        }
+
+        [data-theme="dark"] .alert-warning {
+            background: #78350f;
+            color: #fef3c7;
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <div class="container">
+        <!-- الهيدر -->
+        <div class="header">
+            <div class="header-left">
+                <h1>🌡️ نظام التحكم Arduino Pro</h1>
+                <div class="status-badges">
+                    <span class="badge badge-offline" id="connectionBadge">⚫ غير متصل</span>
+                   
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="refresh-btn" onclick="fetchData()" title="تحديث">🔄</button>
+                <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+            </div>
+        </div>
+
+        <!-- التبويبات -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('dashboard')">📊 لوحة التحكم</button>
+            <button class="tab" onclick="switchTab('sensors')">🌡️ المستشعرات</button>
+            <button class="tab" onclick="switchTab('control')">💡 التحكم</button>
+            <button class="tab" onclick="switchTab('charts')">📈 الرسوم البيانية</button>
+            <button class="tab" onclick="switchTab('stats')">📊 الإحصائيات</button>
+            <button class="tab" onclick="switchTab('settings')">⚙️ الإعدادات</button>
+        </div>
+
+        <!-- لوحة التحكم -->
+        <div id="dashboard" class="tab-content active">
+            <div class="grid">
+              <!-- محتوى التبويبات -->
+        
+        <!-- لوحة التحكم -->
+        <div id="dashboard" class="tab-content active">
+            <!-- شعار الجامعة ومعلومات المشروع -->
+            <div class="card" style="text-align: center; margin-bottom: 20px;">
+                <div class="university-logo">
+                   <img src="https://i.ibb.co/20dDFyW1/images.jpg" 
+             alt="شعار جامعة مصطفى اسطمبولي - معسكر" 
+             onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/004d00/ffffff?text=UMAB';"
+             style="width: 150px; 
+                    height: 150px; 
+                    border-radius: 50%; 
+                    margin: 20px auto; 
+                    box-shadow: 0 8px 30px rgba(0,150,255,0.5);
+                    border: 5px solid rgba(255,255,255,0.2);
+                    background: white;
+                    padding: 15px;
+                    object-fit: contain;
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    display: block;"
+             onmouseover="this.style.transform='scale(1.1) rotate(5deg)'; this.style.boxShadow='0 12px 40px rgba(0,150,255,0.7)';"
+             onmouseout="this.style.transform='scale(1) rotate(0deg)'; this.style.boxShadow='0 8px 30px rgba(0,150,255,0.5)';">
+    </div>
+                <h2 style="color: var(--primary); font-size: 1.8em; margin: 15px 0;">جامعة مصطفى اسطمبولي -معسكر</h2>
+                <h3 style="color: var(--secondary); font-size: 1.3em; margin: 10px 0;">Département d'Electrotechnique</h3>
+                <p style="font-size: 1.1em; opacity: 0.8; margin: 10px 0;">Conception et Prototypage d'un Incubateur Néonatal: Utilisation au Sein du Service de Pédiatrie.</p>
+                <p style="font-size: 0.95em; opacity: 0.7;">| مشروع تخرج 2025-2026</p>
+            </div>
+
+            <!-- أعضاء الفريق -->
+            <div class="card">
+                <h3 class="card-title">👥 فريق المشروع</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                    <!-- عضو 1 -->
+                    <div class="team-member">
+                      <img src="https://imgur.com/UBXCX.jpg" 
+             alt="صورة شخصية" 
+             onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/004d00/ffffff?text=UMAB';"
+             style="width: 150px; 
+                    height: 150px; 
+                    border-radius: 50%; 
+                    margin: 20px auto; 
+                    box-shadow: 0 8px 30px rgba(0,150,255,0.5);
+                    border: 5px solid rgba(255,255,255,0.2);
+                    background: white;
+                    padding: 15px;
+                    object-fit: contain;
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    display: block;"
+             onmouseover="this.style.transform='scale(1.1) rotate(5deg)'; this.style.boxShadow='0 12px 40px rgba(0,150,255,0.7)';"
+             onmouseout="this.style.transform='scale(1) rotate(0deg)'; this.style.boxShadow='0 8px 30px rgba(0,150,255,0.5)';">
+    
+                        <div class="member-avatar"></div>
+                        <h4>Kada Fatima Zohra</h4>
+                        <p class="member-role">étudiant</p>
+                        <div class="member-info">
+                            <div>📧 <a href="mailto:Kadafatimazohra71@gmail.com" style="color: var(--primary); text-decoration: none;">Kadafatimazohra71@gmail.com</a></div>
+                            
+                          <div>🎓 Electronique Systeme Embarque </div>
+                       
+                    </div>
+
+                    <!-- عضو 2 -->
+                    <div class="team-member">
+                        <div class="member-avatar"></div>
+                        <img src="https://imgur.comjLozt.jpg" 
+             alt="صورة شخصية" 
+             onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/004d00/ffffff?text=UMAB';"
+             style="width: 150px; 
+                    height: 150px; 
+                    border-radius: 50%; 
+                    margin: 20px auto; 
+                    box-shadow: 0 8px 30px rgba(0,150,255,0.5);
+                    border: 5px solid rgba(255,255,255,0.2);
+                    background: white;
+                    padding: 15px;
+                    object-fit: contain;
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    display: block;"
+             onmouseover="this.style.transform='scale(1.1) rotate(5deg)'; this.style.boxShadow='0 12px 40px rgba(0,150,255,0.7)';"
+             onmouseout="this.style.transform='scale(1) rotate(0deg)'; this.style.boxShadow='0 8px 30px rgba(0,150,255,0.5)';">
+    
+                        <h4>Boudjoras Meriem</h4>
+                        <p class="member-role">étudiant</p>
+                        <div class="member-info">
+                          <div>📧 <a href="mailto:boudjorasmeriem@gmail.com" style="color: var(--primary); text-decoration: none;">boudjorasmeriem@gmail.com</a></div>
+                           
+                            <div>🎓 Electronique Systeme Embarque</div>
+                        </div>
+                        
+                    </div>
+
+                    <!-- عضو 3 -->
+                    <div class="team-member">
+                        <div class="member-avatar"></div>
+                        <img src="https://imgur.com/T04st.jpg" 
+             alt="صورة شخصية" 
+             onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/004d00/ffffff?text=UMAB';"
+             style="width: 150px; 
+                    height: 150px; 
+                    border-radius: 50%; 
+                    margin: 20px auto; 
+                    box-shadow: 0 8px 30px rgba(0,150,255,0.5);
+                    border: 5px solid rgba(255,255,255,0.2);
+                    background: white;
+                    padding: 15px;
+                    object-fit: contain;
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    display: block;"
+             onmouseover="this.style.transform='scale(1.1) rotate(5deg)'; this.style.boxShadow='0 12px 40px rgba(0,150,255,0.7)';"
+             onmouseout="this.style.transform='scale(1) rotate(0deg)'; this.style.boxShadow='0 8px 30px rgba(0,150,255,0.5)';">
+    
+                        <h4>Chaabane Hibet El rahmen</h4>
+                        <p class="member-role">étudiant</p>
+                        <div class="member-info">
+                          <div>📧 <a href="hibachaabane351@gmail.com" style="color: var(--primary); text-decoration: none;">hibachaabane351@gmail.com</a></div>
+                            
+                            <div>🎓 Electronique Systeme Embarque</div>
+                        </div>
+                        
+                    </div>
+
+                  
+            <!-- الأساتذة المشرفون -->
+            <div class="card">
+                <h3 class="card-title">👨‍🏫 الأساتذة المشرفون</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px;">
+                    <!-- مشرف 1 -->
+                    <div class="supervisor-card">
+                        <div class="supervisor-avatar"></div>
+                      <img src="https://imgur.com/Ydo3qPq.jpg" 
+             alt="صورة شخصية" 
+             onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/004d00/ffffff?text=UMAB';"
+             style="width: 150px; 
+                    height: 150px; 
+                    border-radius: 50%; 
+                    margin: 20px auto; 
+                    box-shadow: 0 8px 30px rgba(0,150,255,0.5);
+                    border: 5px solid rgba(255,255,255,0.2);
+                    background: white;
+                    padding: 15px;
+                    object-fit: contain;
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    display: block;"
+             onmouseover="this.style.transform='scale(1.1) rotate(5deg)'; this.style.boxShadow='0 12px 40px rgba(0,150,255,0.7)';"
+             onmouseout="this.style.transform='scale(1) rotate(0deg)'; this.style.boxShadow='0 8px 30px rgba(0,150,255,0.5)';">
+    
+                        <h4>Dr.hebali mourad</h4>
+                        <p class="supervisor-title">PhD in Electrical Engineering Professor (Associate)</p>
+                        <div class="supervisor-info">
+                            <div>🏛️ جامعة معسكر للعلوم والتكنولوجيا</div>
+                            <div>📧 <a href="mailto:hebalimourad@yahoo.fr" style="color: var(--primary); text-decoration: none;">hebalimourad@yahoo.fr</a></div>
+                            <div>📧 mourad.hebali@univ-mascara.dz</div>
+                            <div>Grade : Maître Assistant classe B (MCB)                        </div>
+                        <div class="expertise">
+                           <div class="social-links">
+                            <a href="https://www.linkedin.com/in/mourad-hebali-10196675/" target="_blank" class="social-btn">linkedin</a>
+                            </div>
+                        </div>
+                    </div>
+
+                  
+                <!-- بطاقة الحساسات السريعة -->
+                <div class="card">
+                    <div class="card-title">🌡️ القراءات الحالية</div>
+                    <div class="sensor-grid">
+                        <div class="sensor-item">
+                            <div class="sensor-icon">🌡️</div>
+                            <div class="sensor-value" id="temp-dash">--</div>
+                            <div class="sensor-label">الحرارة (°C)</div>
+                        </div>
+                        <div class="sensor-item">
+                            <div class="sensor-icon">💧</div>
+                            <div class="sensor-value" id="humidity-dash">--</div>
+                            <div class="sensor-label">الرطوبة (%)</div>
+                        </div>
+                        <div class="sensor-item">
+                            <div class="sensor-icon">⚖️</div>
+                            <div class="sensor-value" id="weight-dash">--</div>
+                            <div class="sensor-label">الوزن (g)</div>
+                        </div>
+                        <div class="sensor-item">
+                            <div class="sensor-icon">🌡️</div>
+                            <div class="sensor-value" id="tempAmbient-dash">--</div>
+                            <div class="sensor-label">حرارة محيطة (°C)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- بطاقة حالة LED -->
+                <div class="card">
+                    <div class="card-title">💡 حالة LED</div>
+                    <div class="led-container">
+                        <div class="led-visual" id="ledVisual-dash"></div>
+                        <div style="font-size: 1.3em; font-weight: bold;" id="ledText-dash">مطفأة</div>
+                        <div class="control-buttons">
+                            <button class="btn btn-on" onclick="controlLED('ON')">🔆 تشغيل</button>
+                            <button class="btn btn-off" onclick="controlLED('OFF')">🔅 إيقاف</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info" style="margin-top: 20px;">
+                <span>ℹ️</span>
+                <span>آخر تحديث: <strong id="lastUpdate-dash">--</strong></span>
+            </div>
+        </div>
+
+        <!-- المستشعرات -->
+        <div id="sensors" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title">🌡️ مستشعر الحرارة DHT11</div>
+                    <div class="sensor-detail">
+                        <div class="sensor-detail-header">
+                            <span class="sensor-detail-title">درجة الحرارة</span>
+                            <span class="sensor-detail-value" id="temp">-- °C</span>
+                        </div>
+                        <div class="sensor-detail-info">
+                            📍 يقيس درجة حرارة الجو المحيط بدقة عالية
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">💧 مستشعر الرطوبة</div>
+                    <div class="sensor-detail">
+                        <div class="sensor-detail-header">
+                            <span class="sensor-detail-title">الرطوبة النسبية</span>
+                            <span class="sensor-detail-value" id="humidity">-- %</span>
+                        </div>
+                        <div class="sensor-detail-info">
+                            📍 يقيس نسبة الرطوبة في الهواء
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">⚖️ مستشعر الوزن HX711</div>
+                    <div class="sensor-detail">
+                        <div class="sensor-detail-header">
+                            <span class="sensor-detail-title">الوزن</span>
+                            <span class="sensor-detail-value" id="weight">-- g</span>
+                        </div>
+                        <div class="sensor-detail-info">
+                            📍 يقيس الوزن بدقة عالية باستخدام خلية الحمل
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🌡️ مستشعر GY-906 (محيطة)</div>
+                    <div class="sensor-detail">
+                        <div class="sensor-detail-header">
+                            <span class="sensor-detail-title">الحرارة المحيطة</span>
+                            <span class="sensor-detail-value" id="tempAmbient">-- °C</span>
+                        </div>
+                        <div class="sensor-detail-info">
+                            📍 يقيس درجة حرارة البيئة المحيطة بدون تماس
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🎯 مستشعر GY-906 (الجسم)</div>
+                    <div class="sensor-detail">
+                        <div class="sensor-detail-header">
+                            <span class="sensor-detail-title">حرارة الجسم</span>
+                            <span class="sensor-detail-value" id="tempObject">-- °C</span>
+                        </div>
+                        <div class="sensor-detail-info">
+                            📍 يقيس درجة حرارة الأجسام بالأشعة تحت الحمراء
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info" style="margin-top: 20px;">
+                <span>ℹ️</span>
+                <span>التحديث التلقائي كل 5 ثوانٍ - آخر تحديث: <strong id="lastUpdate-sensors">--</strong></span>
+            </div>
+        </div>
+
+        <!-- التحكم -->
+        <div id="control" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title">💡 التحكم في LED</div>
+                    <div class="led-container">
+                        <div class="led-visual" id="ledVisual"></div>
+                        <div style="font-size: 1.5em; font-weight: bold; margin: 15px 0;" id="ledStatus">الحالة: مطفأة</div>
+                        <div class="control-buttons">
+                            <button class="btn btn-on" onclick="controlLED('ON')">🔆 تشغيل LED</button>
+                            <button class="btn btn-off" onclick="controlLED('OFF')">🔅 إيقاف LED</button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info" style="margin-top: 30px;">
+                        <span>💡</span>
+                        <div>
+                            <strong>معلومات LED:</strong><br>
+                            متصل بالمنفذ الرقمي 13 على Arduino<br>
+                            يمكن التحكم به يدوياً أو تلقائياً
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📊 معلومات النظام</div>
+                    <table class="info-table">
+                        <tr>
+                            <td>📡 حالة الاتصال</td>
+                            <td><span id="connectionStatus">جاري الفحص...</span></td>
+                        </tr>
+                        <tr>
+                            <td>🔌 المنفذ</td>
+                            <td>13 (LED)</td>
+                        </tr>
+                        <tr>
+                            <td>🌡️ عدد المستشعرات</td>
+                            <td>5 مستشعرات</td>
+                        </tr>
+                        <tr>
+                            <td>⏱️ وقت التحديث</td>
+                            <td>5 ثوانٍ</td>
+                        </tr>
+                        <tr>
+                            <td>📅 آخر تحديث</td>
+                            <td><span id="lastUpdate-control">--</span></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- الرسوم البيانية -->
+        <div id="charts" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title">🌡️ رسم بياني للحرارة</div>
+                    <div class="chart-container">
+                        <canvas id="tempChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">💧 رسم بياني للرطوبة</div>
+                    <div class="chart-container">
+                        <canvas id="humChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">⚖️ رسم بياني للوزن</div>
+                    <div class="chart-container">
+                        <canvas id="weightChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🌡️ رسم بياني للحرارة المحيطة</div>
+                    <div class="chart-container">
+                        <canvas id="ambientChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info" style="margin-top: 20px;">
+                <span>📈</span>
+                <span>تُحدّث الرسوم البيانية تلقائياً كل دقيقة لعرض آخر 24 قراءة</span>
+            </div>
+        </div>
+
+        <!-- الإحصائيات -->
+        <div id="stats" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">⏱️ وقت التشغيل</div>
+                    <div class="stat-value" id="uptime">0س 0د</div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">💡 تشغيلات LED</div>
+                    <div class="stat-value" id="ledToggles">0</div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">📊 عدد القراءات</div>
+                    <div class="stat-value" id="readingsCount">0</div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">📡 معدل النجاح</div>
+                    <div class="stat-value" id="successRate">100%</div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
+                <div class="card-title">📊 معلومات تفصيلية</div>
+                <table class="info-table">
+                    <tr>
+                        <td>🌡️ متوسط الحرارة</td>
+                        <td><span id="avgTemp">-- °C</span></td>
+                    </tr>
+                    <tr>
+                        <td>💧 متوسط الرطوبة</td>
+                        <td><span id="avgHumidity">-- %</span></td>
+                    </tr>
+                    <tr>
+                        <td>⚖️ متوسط الوزن</td>
+                        <td><span id="avgWeight">-- g</span></td>
+                    </tr>
+                    <tr>
+                        <td>🔥 أعلى حرارة</td>
+                        <td><span id="maxTemp">-- °C</span></td>
+                    </tr>
+                    <tr>
+                        <td>❄️ أقل حرارة</td>
+                        <td><span id="minTemp">-- °C</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- الإعدادات -->
+        <div id="settings" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title">🌐 إعدادات الاتصال</div>
+                    <div class="settings-group">
+                        <h3>🔌 إعداد Arduino</h3>
+                        <div class="input-group">
+                            <label for="arduinoIP">عنوان IP للأردوينو:</label>
+                            <input type="text" id="arduinoIP" placeholder="مثال: 192.168.1.100">
+                        </div>
+                        <button class="save-btn" onclick="saveIP()">💾 حفظ عنوان IP</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📊 إعدادات العرض</div>
+                    <div class="settings-group">
+                        <h3>🎨 الثيم والمظهر</h3>
+                        <div class="alert alert-info">
+                            <span>💡</span>
+                            <span>استخدم زر 🌙/☀️ في الأعلى للتبديل بين الوضع النهاري والليلي</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">ℹ️ معلومات النظام</div>
+                    <table class="info-table">
+                        <tr>
+                            <td>📟 البورد</td>
+                            <td>Arduino R4 WiFi</td>
+                        </tr>
+                        <tr>
+                            <td>📡 المستشعرات</td>
+                            <td>DHT11, HX711, MLX90614</td>
+                        </tr>
+                        <tr>
+                            <td>💻 الواجهة</td>
+                            <td>HTML5 + JavaScript</td>
+                        </tr>
+                        <tr>
+                            <td>🔄 التحديث</td>
+                            <td>كل 5 ثوانٍ</td>
+                        </tr>
+                        <tr>
+                            <td>📊 الرسوم</td>
+                            <td>Chart.js</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📖 تعليمات الاستخدام</div>
+                    <div class="alert alert-warning">
+                        <span>⚠️</span>
+                        <div>
+                            <strong>خطوات التشغيل:</strong>
+                        </div>
+                    </div>
+                    <table class="info-table">
+                        <tr>
+                            <td>1️⃣</td>
+                            <td>قم برفع كود Arduino إلى البورد</td>
+                        </tr>
+                        <tr>
+                            <td>2️⃣</td>
+                            <td>تأكد من اتصال Arduino بالـ WiFi</td>
+                        </tr>
+                        <tr>
+                            <td>3️⃣</td>
+                            <td>احصل على عنوان IP من Serial Monitor</td>
+                        </tr>
+                        <tr>
+                            <td>4️⃣</td>
+                            <td>أدخل عنوان IP في الإعدادات أعلاه</td>
+                        </tr>
+                        <tr>
+                            <td>5️⃣</td>
+                            <td>ابدأ باستخدام النظام!</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let arduinoIP = localStorage.getItem('arduinoIP') || '192.168.1.100';
+        document.getElementById('arduinoIP').value = arduinoIP;
+
+        // المتغيرات العامة
+        const charts = {};
+        const historyData = {
+            temperature: [],
+            humidity: [],
+            weight: [],
+            ambient: []
+        };
+        let startTime = Date.now();
+        let ledToggleCount = 0;
+        let readingsCount = 0;
+        let successfulReadings = 0;
+
+        // تبديل التبويبات
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+
+            // تحميل البيانات حسب التبويب
+            if (tabName === 'charts' && !charts.tempChart) {
+                initCharts();
+            }
+        }
+
+        // تبديل الثيم
+        function toggleTheme() {
+            const body = document.body;
+            const theme = body.getAttribute('data-theme');
+            const newTheme = theme === 'light' ? 'dark' : 'light';
+            body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            document.querySelector('.theme-toggle').textContent = newTheme === 'light' ? '🌙' : '☀️';
+            
+            // تحديث الرسوم البيانية
+            if (charts.tempChart) {
+                updateChartColors();
+            }
+        }
+
+        // حفظ IP
+        function saveIP() {
+            arduinoIP = document.getElementById('arduinoIP').value;
+            localStorage.setItem('arduinoIP', arduinoIP);
+            alert('✅ تم حفظ عنوان IP بنجاح!');
+            location.reload();
+        }
+
+        // جلب البيانات
+        async function fetchData() {
+            readingsCount++;
+            try {
+                const response = await fetch(`http://${arduinoIP}/api/data`);
+                
+                if (!response.ok) {
+                    throw new Error('Connection failed');
+                }
+
+                const data = await response.json();
+                successfulReadings++;
+                
+                // تحديث حالة الاتصال
+                document.getElementById('connectionBadge').className = 'badge badge-online';
+                document.getElementById('connectionBadge').innerHTML = '🟢 متصل';
+                document.getElementById('connectionStatus').textContent = '🟢 متصل';
+
+                // تحديث القيم
+                updateSensorValues(data);
+                updateLEDStatus(data.led);
+                updateHistory(data);
+                updateStats();
+
+                // تحديث الوقت
+                const now = new Date().toLocaleTimeString('ar-DZ');
+                document.querySelectorAll('[id^="lastUpdate"]').forEach(el => {
+                    el.textContent = now;
+                });
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('connectionBadge').className = 'badge badge-offline';
+                document.getElementById('connectionBadge').innerHTML = '🔴 غير متصل';
+                document.getElementById('connectionStatus').textContent = '🔴 غير متصل';
+            }
+        }
+
+        // تحديث قيم المستشعرات
+        function updateSensorValues(data) {
+            const temp = data.temperature.toFixed(1);
+            const humidity = data.humidity.toFixed(1);
+            const weight = data.weight.toFixed(2);
+            const tempAmbient = data.tempAmbient.toFixed(1);
+            const tempObject = data.tempObject.toFixed(1);
+
+            // لوحة التحكم
+            document.getElementById('temp-dash').textContent = temp;
+            document.getElementById('humidity-dash').textContent = humidity;
+            document.getElementById('weight-dash').textContent = weight;
+            document.getElementById('tempAmbient-dash').textContent = tempAmbient;
+
+            // تبويب المستشعرات
+            document.getElementById('temp').textContent = temp + ' °C';
+            document.getElementById('humidity').textContent = humidity + ' %';
+            document.getElementById('weight').textContent = weight + ' g';
+            document.getElementById('tempAmbient').textContent = tempAmbient + ' °C';
+            document.getElementById('tempObject').textContent = tempObject + ' °C';
+        }
+
+        // تحديث حالة LED
+        function updateLEDStatus(ledState) {
+            const isOn = ledState === 1;
+            
+            // تحديث جميع المؤشرات
+            ['ledVisual', 'ledVisual-dash'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.className = isOn ? 'led-visual on' : 'led-visual';
+                }
+            });
+
+            // تحديث النصوص
+            if (document.getElementById('ledStatus')) {
+                document.getElementById('ledStatus').textContent = isOn ? 'الحالة: مشتعلة 🔆' : 'الحالة: مطفأة 🔅';
+            }
+            if (document.getElementById('ledText-dash')) {
+                document.getElementById('ledText-dash').textContent = isOn ? 'مشتعلة 🔆' : 'مطفأة 🔅';
+            }
+        }
+
+        // التحكم في LED
+        async function controlLED(state) {
+            try {
+                const response = await fetch(`http://${arduinoIP}/${state}`);
+                if (response.ok) {
+                    ledToggleCount++;
+                    setTimeout(fetchData, 500);
+                }
+            } catch (error) {
+                console.error('Error controlling LED:', error);
+                alert('❌ خطأ في التحكم بـ LED');
+            }
+        }
+
+        // تحديث السجل
+        function updateHistory(data) {
+            historyData.temperature.push(data.temperature);
+            historyData.humidity.push(data.humidity);
+            historyData.weight.push(data.weight);
+            historyData.ambient.push(data.tempAmbient);
+
+            // الاحتفاظ بآخر 24 قراءة فقط
+            Object.keys(historyData).forEach(key => {
+                if (historyData[key].length > 24) {
+                    historyData[key].shift();
+                }
+            });
+
+            // تحديث الرسوم البيانية
+            if (charts.tempChart) {
+                updateCharts();
+            }
+        }
+
+        // تحديث الإحصائيات
+        function updateStats() {
+            // وقت التشغيل
+            const uptime = Math.floor((Date.now() - startTime) / 1000);
+            const hours = Math.floor(uptime / 3600);
+            const mins = Math.floor((uptime % 3600) / 60);
+            document.getElementById('uptime').textContent = `${hours}س ${mins}د`;
+
+            // عدد التشغيلات
+            document.getElementById('ledToggles').textContent = ledToggleCount;
+            document.getElementById('readingsCount').textContent = readingsCount;
+
+            // معدل النجاح
+            const successRate = readingsCount > 0 ? 
+                ((successfulReadings / readingsCount) * 100).toFixed(1) : 100;
+            document.getElementById('successRate').textContent = successRate + '%';
+
+            // المتوسطات
+            if (historyData.temperature.length > 0) {
+                const avgTemp = (historyData.temperature.reduce((a, b) => a + b, 0) / historyData.temperature.length).toFixed(1);
+                const avgHum = (historyData.humidity.reduce((a, b) => a + b, 0) / historyData.humidity.length).toFixed(1);
+                const avgWeight = (historyData.weight.reduce((a, b) => a + b, 0) / historyData.weight.length).toFixed(2);
+                const maxTemp = Math.max(...historyData.temperature).toFixed(1);
+                const minTemp = Math.min(...historyData.temperature).toFixed(1);
+
+                document.getElementById('avgTemp').textContent = avgTemp + ' °C';
+                document.getElementById('avgHumidity').textContent = avgHum + ' %';
+                document.getElementById('avgWeight').textContent = avgWeight + ' g';
+                document.getElementById('maxTemp').textContent = maxTemp + ' °C';
+                document.getElementById('minTemp').textContent = minTemp + ' °C';
+            }
+        }
+
+        // إنشاء الرسوم البيانية
+        function initCharts() {
+            const chartConfig = (label, data, color) => ({
+                type: 'line',
+                data: {
+                    labels: Array.from({length: historyData[data].length || 24}, (_, i) => i + 1),
+                    datasets: [{
+                        label: label,
+                        data: historyData[data],
+                        borderColor: color,
+                        backgroundColor: color + '20',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            charts.tempChart = new Chart(document.getElementById('tempChart'), 
+                chartConfig('درجة الحرارة', 'temperature', '#ef4444'));
+            charts.humChart = new Chart(document.getElementById('humChart'), 
+                chartConfig('الرطوبة', 'humidity', '#3b82f6'));
+            charts.weightChart = new Chart(document.getElementById('weightChart'), 
+                chartConfig('الوزن', 'weight', '#10b981'));
+            charts.ambientChart = new Chart(document.getElementById('ambientChart'), 
+                chartConfig('الحرارة المحيطة', 'ambient', '#f59e0b'));
+        }
+
+        // تحديث الرسوم البيانية
+        function updateCharts() {
+            Object.keys(charts).forEach(key => {
+                const dataKey = key.replace('Chart', '');
+                const mappedKey = dataKey === 'hum' ? 'humidity' : 
+                                 dataKey === 'ambient' ? 'ambient' :
+                                 dataKey;
+                
+                if (historyData[mappedKey]) {
+                    charts[key].data.labels = Array.from({length: historyData[mappedKey].length}, (_, i) => i + 1);
+                    charts[key].data.datasets[0].data = historyData[mappedKey];
+                    charts[key].update();
+                }
+            });
+        }
+
+        // تحديث ألوان الرسوم عند تغيير الثيم
+        function updateChartColors() {
+            const theme = document.body.getAttribute('data-theme');
+            const gridColor = theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+            
+            Object.keys(charts).forEach(key => {
+                charts[key].options.scales.x.grid.color = gridColor;
+                charts[key].options.scales.y.grid.color = gridColor;
+                charts[key].update();
+            });
+        }
+
+        // استعادة الثيم المحفوظ
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.body.setAttribute('data-theme', savedTheme);
+        document.querySelector('.theme-toggle').textContent = savedTheme === 'light' ? '🌙' : '☀️';
+
+        // بدء التطبيق
+        fetchData();
+        setInterval(fetchData, 5000);
+    </script>
+</body>
+</html>
